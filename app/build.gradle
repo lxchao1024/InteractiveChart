@@ -40,4 +40,5 @@ dependencies {
     implementation 'androidx.core:core-ktx:1.9.0'
     implementation 'org.greenrobot:eventbus:3.1.1'
     implementation project(':WKChart')
+    implementation 'org.java-websocket:Java-WebSocket:1.5.4'
 }

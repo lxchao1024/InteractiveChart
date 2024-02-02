@@ -36,8 +36,11 @@ import com.wk.chart.enumeration.TimeType;
 import com.wk.chart.handler.InteractiveHandler;
 import com.wk.chart.interfaces.ICacheLoadListener;
 import com.wk.demo.R;
+import com.wk.demo.model.DepthSocketInfo;
+import com.wk.demo.model.JsonUtils;
 import com.wk.demo.model.ServiceMessage;
 import com.wk.demo.service.PushService;
+import com.wk.demo.util.DataUtils;
 import com.wk.view.indexSetting.IndexManager;
 import com.wk.view.indexSetting.IndexSettingActivity;
 import com.wk.view.tab.ChartIndexTabLayout;
@@ -47,9 +50,12 @@ import com.wk.view.tab.ChartTabListener;
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
+import org.java_websocket.client.WebSocketClient;
+import org.java_websocket.handshake.ServerHandshake;
 import org.jetbrains.annotations.NotNull;
 
 import java.beans.PropertyChangeListener;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -118,6 +124,17 @@ public class ChartActivity extends AppCompatActivity implements ChartTabListener
                 return;
             }
             recoveryChartState();
+
+            chartLayout.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        socketClient.connectBlocking();
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            }, 5000);
         }, 1000);
     }
 
@@ -195,7 +212,7 @@ public class ChartActivity extends AppCompatActivity implements ChartTabListener
 
     private void initChart() {
         if (null == depthAdapter) {
-            this.depthAdapter = new DepthAdapter(4, 4, "BTC", "USDT");
+            this.depthAdapter = new DepthAdapter(6, 6, "BTC", "USDT");
         }
         this.depthChart.setAdapter(depthAdapter);
         if (null == candleAdapter) {
@@ -396,5 +413,54 @@ public class ChartActivity extends AppCompatActivity implements ChartTabListener
     public void onSetting() {
         IndexManager.INSTANCE.setIndexBuildConfig(candleAdapter.getBuildConfig().getDefaultIndexConfig());
         startActivityForResult(new Intent(this, IndexSettingActivity.class), 999);
+    }
+
+    private WebSocketClient socketClient = new WebSocketClient(URI.create("wss://ws.coinstore.com/s/ws")) {
+        @Override
+        public void onOpen(ServerHandshake handshakedata) {
+            subDepth();
+        }
+
+        @Override
+        public void onMessage(String message) {
+            if (null == message) return;
+            String it = message;
+            if (it.contains("\"T\":\"depth\"") && it.contains("@depth@100@depth")) {
+                DepthSocketInfo info = JsonUtils.INSTANCE.jsonToBean(it, DepthSocketInfo.class);
+                if (null != info) {
+                    runOnUiThread(() -> {
+                        if (null != depthAdapter) {
+                            depthAdapter.updateData(DataUtils.getDepthData(info));
+                        }
+                    });
+                }
+            }
+        }
+
+        @Override
+        public void onClose(int code, String reason, boolean remote) {
+
+        }
+
+        @Override
+        public void onError(Exception ex) {
+
+        }
+    };
+
+    private void subDepth() {
+        if (null != socketClient) {
+            socketClient.send("{\"channel\":[\"4@depth@100@depth\"],\"id\":4,\"op\":\"SUB\"}");
+        }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        try {
+            socketClient.closeBlocking();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

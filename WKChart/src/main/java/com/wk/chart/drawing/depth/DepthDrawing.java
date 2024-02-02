@@ -6,7 +6,9 @@ import android.graphics.Canvas;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.RectF;
 import android.graphics.Shader;
+import android.util.Log;
 
 import com.wk.chart.adapter.DepthAdapter;
 import com.wk.chart.compat.Utils;
@@ -15,6 +17,8 @@ import com.wk.chart.drawing.base.AbsDrawing;
 import com.wk.chart.entry.DepthEntry;
 import com.wk.chart.module.DepthModule;
 import com.wk.chart.render.DepthRender;
+
+import java.util.function.ObjIntConsumer;
 
 /**
  * <p>DepthDrawing</p>
@@ -111,11 +115,29 @@ public class DepthDrawing extends AbsDrawing<DepthRender, DepthModule> {
     @Override
     public void onDraw(Canvas canvas, int begin, int end, float[] extremum) {
         canvas.save();
-        canvas.clipRect(viewRect);
+        RectF left = new RectF(viewRect.left, viewRect.top, (viewRect.right - viewRect.left) / 2, viewRect.bottom);
+        RectF right = new RectF(viewRect.centerX(), viewRect.top, viewRect.right, viewRect.bottom);
+        canvas.clipRect(left);
         canvas.drawPath(bidPath, bidShaderPaint);
-        canvas.drawPath(askPath, askShaderPaint);
         canvas.drawPath(bidPath, bidPolylinePaint);
+
+        canvas.clipRect(right);
+        canvas.drawPath(askPath, askShaderPaint);
         canvas.drawPath(askPath, askPolylinePaint);
+
+
+//        for (int i = 0;i<render.getAdapter().getCount();i++)
+
+        DepthEntry entry = render.getAdapter().getItem(0);
+        bidPath.moveTo(viewRect.left, viewRect.top);
+        bidPath.lineTo(viewRect.left + 100, viewRect.top + 100);
+
+        Log.e("DepthDrawing", "price: " + entry.getPrice().value);
+
+//        canvas.drawLine(viewRect.left + 100, viewRect.top, viewRect.left + 100, viewRect.bottom, bidPolylinePaint);
+//        canvas.drawLine(viewRect.left + 100, viewRect.top, viewRect.left + 100, viewRect.bottom, bidPolylinePaint);
+//        canvas.drawPath(bidPath, bidPolylinePaint);
+
         bidPath.rewind();
         askPath.rewind();
         canvas.restore();
@@ -124,6 +146,10 @@ public class DepthDrawing extends AbsDrawing<DepthRender, DepthModule> {
     @Override
     public void drawOver(Canvas canvas) {
     }
+
+
+
+    private float mGridWidth;
 
     @Override
     public void onLayoutComplete() {
