@@ -1,5 +1,7 @@
 package com.wk.chart.adapter;
 
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 
 import com.wk.chart.compat.Utils;
@@ -106,6 +108,46 @@ public class DepthAdapter extends AbsAdapter<DepthEntry, NormalBuildConfig> {
                     asks.get(asks.size() - 1).getTotalAmount().result, ASK, new Date());
             asks.add(maxBean);
         }
+
+        DepthEntry bid = null;
+        DepthEntry ask = null;
+
+        if (bids.size() > 0) {
+            bid = bids.get(bids.size() - 1);
+//            bids.get(bids.size() - 1).getPrice()
+        }
+
+        if (asks.size() > 0) {
+            ask = asks.get(asks.size() - 1);
+        }
+
+        if (bid != null && null != ask) {
+
+            long space = ask.getPrice().result - ((ask.getPrice().result - bid.getPrice().result) / 2);
+            Log.e("DepthAdapter", "a: " + ask.getPrice().result + ", b: " + bid.getPrice().result + ", space: " + space);
+
+            if (bids.get(0).getPrice().result < space) {
+                DepthEntry minBean = new DepthEntry(getScale(), space, 0L, bids.get(0).getTotalAmount().result, BID, new Date());
+                bids.add(0, minBean);
+            }
+
+            if (asks.get(0).getPrice().result > space) {
+                DepthEntry maxBean = new DepthEntry(getScale(), space, 0L,
+                        asks.get(0).getTotalAmount().result, ASK, new Date());
+                asks.add(0, maxBean);
+            }
+        }
+
+        for (DepthEntry depthEntry : bids) {
+            Log.e("DepthAdapter", "bids, depthEntry: " + depthEntry.getPrice().value);
+        }
+
+        Log.e("DepthAdapter", "");
+
+        for (DepthEntry depthEntry : asks) {
+            Log.e("DepthAdapter", "asks, depthEntry: " + depthEntry.getPrice().value);
+        }
+
         data.addAll(bids);
         data.addAll(asks);
     }
@@ -147,3 +189,4 @@ public class DepthAdapter extends AbsAdapter<DepthEntry, NormalBuildConfig> {
     }
 
 }
+

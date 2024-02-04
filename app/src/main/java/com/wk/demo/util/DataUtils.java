@@ -11,6 +11,7 @@ import com.wk.chart.entry.CandleEntry;
 import com.wk.chart.entry.DepthEntry;
 import com.wk.chart.enumeration.MarkerPointType;
 import com.wk.demo.MyApp;
+import com.wk.demo.model.DepthSocketInfo;
 import com.wk.demo.model.DepthWrapper;
 
 import java.io.InputStream;
@@ -88,6 +89,58 @@ public class DataUtils {
             String json = new String(buffer, 0, buffer.length, "UTF-8");
             Gson gson = new Gson();
             DepthWrapper data = gson.fromJson(json, DepthWrapper.class);
+
+            Collections.sort(data.getBids(), (arg1, arg0) -> arg0.getPrice()
+                    .compareTo(arg1.getPrice()));
+
+            Collections.sort(data.getAsks(), (arg0, arg1) -> arg0.getPrice()
+                    .compareTo(arg1.getPrice()));
+
+            List<DepthEntry> depthData = new ArrayList<>();
+            BigDecimal totalAmount = BigDecimal.ZERO;
+            for (int i = 0; i < data.getBids().size(); i++) {
+                DepthWrapper.Depth item = data.getBids().get(i);
+                totalAmount = totalAmount.add(item.getAmount());
+                depthData.add(new DepthEntry(
+                        item.getPrice().toPlainString(), item.getAmount().toPlainString(),
+                        totalAmount.toPlainString(), DepthAdapter.BID, new Date()));
+            }
+            totalAmount = BigDecimal.ZERO;
+            for (int i = 0; i < data.getAsks().size(); i++) {
+                DepthWrapper.Depth item = data.getAsks().get(i);
+                totalAmount = totalAmount.add(item.getAmount());
+                depthData.add(new DepthEntry(
+                        item.getPrice().toPlainString(), item.getAmount().toPlainString(),
+                        totalAmount.toPlainString(), DepthAdapter.ASK, new Date()));
+            }
+            return depthData;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public static List<DepthEntry> getDepthData(DepthSocketInfo socketInfo) {
+        try {
+            ArrayList<DepthWrapper.Depth> asks = new ArrayList<>();
+            ArrayList<DepthWrapper.Depth> bids = new ArrayList<>();
+            DepthWrapper.Depth depth;
+            for (int i = 0; i< socketInfo.getA().size();i++) {
+                depth = new DepthWrapper.Depth();
+                depth.setAmount(socketInfo.getA().get(i).get(1).getAsBigDecimal());
+                depth.setPrice(socketInfo.getA().get(i).get(0).getAsBigDecimal());
+                asks.add(depth);
+            }
+            for (int i = 0; i< socketInfo.getB().size();i++) {
+                depth = new DepthWrapper.Depth();
+                depth.setAmount(socketInfo.getB().get(i).get(1).getAsBigDecimal());
+                depth.setPrice(socketInfo.getB().get(i).get(0).getAsBigDecimal());
+                bids.add(depth);
+            }
+
+            DepthWrapper data = new DepthWrapper();
+            data.setAsks(asks);
+            data.setBids(bids);
 
             Collections.sort(data.getBids(), (arg1, arg0) -> arg0.getPrice()
                     .compareTo(arg1.getPrice()));
